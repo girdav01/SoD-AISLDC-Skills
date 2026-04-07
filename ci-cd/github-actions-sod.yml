@@ -1,0 +1,233 @@
+# =============================================================
+# CI/CD Integration — SoD Enforcement in Pipelines
+# =============================================================
+# Examples for GitHub Actions, GitLab CI, and generic pipelines.
+# The sod_detect.py script returns exit codes:
+#   0 = ENFORCED  (pass)
+#   1 = VIOLATED  (fail/block)
+#   2 = WARNING   (same provider, flag for review)
+#   3 = UNKNOWN   (could not resolve, flag for review)
+# © 2026 David Girard
+# =============================================================
+
+# ----- GitHub Actions -----
+
+name: SoD Security Gate
+on:
+  pull_request:
+    types: [opened, synchronize]
+
+env:
+  # Set these as repository secrets or derive from PR metadata
+  GENERATION_MODEL: "claude-opus-4-6"  # Model that generated the code
+  REVIEW_MODEL: "gemini-2.5-pro"       # Model performing the review
+
+jobs:
+  sod-check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      # Phase 1: Scan for AI generation markers in commits
+      - name: "Phase 1 — Detect AI-Generated Code"
+        run: python sod_detect.py scan --repo-path . --max-commits 10
+
+      # Phase 2: Verify SoD between generator and reviewer
+      - name: "Phase 2 — SoD Verification"
+        id: sod
+        run: |
+          python sod_detect.py check \
+            --gen-model "$GENERATION_MODEL" \
+            --review-model "$REVIEW_MODEL" \
+            --tools semgrep trivy gitleaks \
+            --output sod-audit.json
+        continue-on-error: true
+
+      # Phase 3: Run deterministic tools (always independent)
+      - name: "Phase 3a — SAST (Semgrep)"
+        uses: returntocorp/semgrep-action@v1
+        with:
+          config: p/owasp-top-ten
+
+      - name: "Phase 3b — Dependency Scan (Trivy)"
+        uses: aquasecurity/trivy-action@master
+        with:
+          scan-type: fs
+          scan-ref: .
+
+      - name: "Phase 3c — Secrets Detection (Gitleaks)"
+        uses: gitleaks/gitleaks-action@v2
+
+      # Phase 4: Upload audit trail
+      - name: "Phase 4 — Upload Audit Record"
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: sod-audit-record
+          path: sod-audit.json
+
+      # Gate: Block merge if SoD is violated
+      - name: "Gate — Enforce SoD Policy"
+        if: steps.sod.outcome == 'failure'
+        run: |
+          echo "❌ SoD VIOLATION: Same model family used for generation and review."
+          echo "   Merge blocked until independent review is completed."
+          exit 1
+
+# ----- GitLab CI -----
+
+.gitlab-ci.yml-sod:
+  # Configure SoD variables in your GitLab CI/CD settings:
+  #   GENERATION_MODEL = "claude-opus-4-6"    (from project or group variables)
+  #   REVIEW_MODEL = "gemini-2.5-pro"         (from project or group variables)
+
+stages:
+  - detect
+  - verify
+  - scan
+  - audit
+
+variables:
+  PIP_CACHE_DIR: "$CI_PROJECT_DIR/.cache/pip"
+
+cache:
+  paths:
+    - .cache/pip
+
+# Phase 1: Detect AI generation markers
+detect-ai-code:
+  stage: detect
+  image: python:3.12
+  script:
+    - pip install -q -r requirements-dev.txt  # if needed
+    - python scripts/sod_detect.py scan --repo-path . --max-commits 10
+  only:
+    - merge_requests
+  allow_failure: false
+
+# Phase 2: SoD verification
+verify-sod:
+  stage: verify
+  image: python:3.12
+  script:
+    - python scripts/sod_detect.py check
+      --gen-model "$GENERATION_MODEL"
+      --review-model "$REVIEW_MODEL"
+      --tools semgrep trivy gitleaks
+      --output sod-audit.json
+  artifacts:
+    name: sod-audit-$CI_COMMIT_SHORT_SHA
+    paths:
+      - sod-audit.json
+    expire_in: 30 days
+  only:
+    - merge_requests
+  allow_failure: true  # Captured in Phase 4 gate
+
+# Phase 3a: SAST (Semgrep)
+sast-semgrep:
+  stage: scan
+  image: returntocorp/semgrep
+  script:
+    - semgrep --config=p/owasp-top-ten --json --output=semgrep-report.json . || true
+  artifacts:
+    reports:
+      sast: semgrep-report.json
+    paths:
+      - semgrep-report.json
+    expire_in: 30 days
+  only:
+    - merge_requests
+
+# Phase 3b: Dependency scan (Trivy)
+dependency-trivy:
+  stage: scan
+  image: aquasec/trivy:latest
+  script:
+    - trivy fs --format json --output trivy-report.json .
+  artifacts:
+    paths:
+      - trivy-report.json
+    expire_in: 30 days
+  only:
+    - merge_requests
+  allow_failure: true
+
+# Phase 3c: Secrets detection (Gitleaks)
+secrets-gitleaks:
+  stage: scan
+  image: zricethezav/gitleaks:latest
+  script:
+    - gitleaks detect --report-path gitleaks-report.json --verbose || true
+  artifacts:
+    paths:
+      - gitleaks-report.json
+    expire_in: 30 days
+  only:
+    - merge_requests
+  allow_failure: true
+
+# Phase 4: Audit gate
+audit-gate:
+  stage: audit
+  image: python:3.12
+  script:
+    - |
+      if [ -f sod-audit.json ]; then
+        RESULT=$(grep -o '"status":"[^"]*"' sod-audit.json | head -1)
+        if [[ $RESULT == *"VIOLATED"* ]]; then
+          echo "❌ SoD VIOLATION detected"
+          echo "Merge blocked until independent review is completed."
+          exit 1
+        fi
+      fi
+    - echo "✅ SoD compliance verified. Audit record prepared."
+  artifacts:
+    name: sod-audit-trail-$CI_COMMIT_SHORT_SHA
+    paths:
+      - sod-audit.json
+      - semgrep-report.json
+      - trivy-report.json
+      - gitleaks-report.json
+    expire_in: 90 days
+  only:
+    - merge_requests
+  allow_failure: false
+
+# ----- Makefile Target -----
+
+# Add to your Makefile for generic CI/CD usage:
+
+# .PHONY: sod-check
+# sod-check:
+# 	@echo "Phase 1: Detecting AI-generated code..."
+# 	python scripts/sod_detect.py scan --repo-path . --max-commits 10
+#
+# 	@echo "Phase 2: Verifying SoD..."
+# 	python scripts/sod_detect.py check \
+# 		--gen-model "${GENERATION_MODEL}" \
+# 		--review-model "${REVIEW_MODEL}" \
+# 		--tools semgrep trivy gitleaks \
+# 		--output sod-audit.json
+#
+# 	@echo "Phase 3: Running deterministic tools..."
+# 	semgrep --config=p/owasp-top-ten --json --output=semgrep-report.json . || true
+# 	trivy fs --format json --output trivy-report.json . || true
+# 	gitleaks detect --report-path gitleaks-report.json --verbose || true
+#
+# 	@echo "Phase 4: Checking SoD compliance..."
+# 	@if grep -q '"status":"VIOLATED"' sod-audit.json; then \
+# 		echo "❌ SoD VIOLATION: Merge blocked."; \
+# 		exit 1; \
+# 	else \
+# 		echo "✅ SoD compliance verified."; \
+# 	fi
+#
+# .PHONY: sod-clean
+# sod-clean:
+# 	rm -f sod-audit.json semgrep-report.json trivy-report.json gitleaks-report.json
