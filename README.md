@@ -54,7 +54,7 @@ sod-skills/
 ├── claude-code/
 │   └── SKILL.md                       # Claude Code skill (auto-triggers)
 ├── cursor/
-│   └── .cursorrules                   # Cursor IDE project rules
+│   └── rules                   # Cursor IDE project rules
 ├── codex/
 │   └── CODEX.md                       # OpenAI Codex/ChatGPT system instructions
 ├── ci-cd/
@@ -88,11 +88,11 @@ ln -s /path/to/sod-skills/claude-code/SKILL.md .claude/skills/sod-code-security/
 # The skill auto-triggers when Claude detects security review requests
 ```
 
-### Cursor IDE
+### Cursor IDE (April 2026 version, not for legacy rules)
 
 ```bash
 # Copy to your project root (Cursor reads .cursorrules automatically)
-cp cursor/.cursorrules /path/to/your-project/.cursorrules
+cp cursor/rules /path/to/your-project/.cursorrules
 
 # Verify Cursor picks it up — open Cursor and check the rules indicator
 ```
