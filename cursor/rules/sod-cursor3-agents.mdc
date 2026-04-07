@@ -1,0 +1,122 @@
+---
+description: "SoD enforcement for Cursor 3 Agent mode, Background Agents, and multi-agent workflows. Activated when using agent features, background tasks, or parallel agent execution."
+alwaysApply: false
+---
+
+# SoD for Cursor 3 Agent & Background Agent Workflows
+
+Cursor 3 introduces agent-first workflows where most code is written by
+AI agents. This creates new SoD risks that must be explicitly managed.
+
+## AGENT MODE SoD RULES
+
+In Cursor's Agent mode, the agent autonomously reads code, edits files,
+runs terminal commands, and iterates on errors. SoD rules apply regardless
+of the agent's autonomy level:
+
+1. **Agent generates + Agent reviews = VIOLATION** if using the same model
+2. **Agent runs SAST tool, then interprets results = ALLOWED** (SAST is independent)
+3. **Agent generates code, user switches model, Agent reviews = ENFORCED** (if different family)
+
+### Model Switching Mid-Session
+
+Cursor allows switching models via the dropdown at the top of the chat panel.
+Switching model mid-session does NOT automatically satisfy SoD:
+
+- Switching within same family (Claude Sonnet → Claude Opus) = **STILL VIOLATION**
+- Switching across families (Claude Sonnet → Gemini Pro) = **ENFORCED**
+- Switching to Cursor's built-in model → Check which underlying model powers it
+
+## BACKGROUND AGENTS
+
+Background Agents run asynchronously in cloud VMs on separate branches and
+push changes as pull requests. They introduce unique SoD considerations:
+
+### SoD Risks with Background Agents
+- Background Agent generates code using Model A → Local Agent reviews using Model A = **VIOLATION**
+- Background Agent generates on branch → Same model reviews the PR = **VIOLATION**
+- Multiple Background Agents using the same model family = **VIOLATION** for cross-review
+
+### SoD Best Practices for Background Agents
+```
+✅ ENFORCED PATTERNS:
+- Background Agent (Claude) generates → Local Agent (Gemini) reviews
+- Background Agent (GPT-4o) generates → CI/CD SAST pipeline reviews
+- Background Agent (Gemini) generates → Different Background Agent (Mistral) reviews
+
+❌ VIOLATION PATTERNS:
+- Background Agent (Claude Sonnet) generates → Local Agent (Claude Opus) reviews
+- Background Agent (GPT-4o) generates → Copilot (GPT-4o) reviews PR
+- Background Agent auto-reviews its own output in the same session
+```
+
+### Background Agent Metadata
+When a Background Agent produces code, the metadata should include:
+
+```
+# --- AI Generation Metadata ---
+# model_id: claude-sonnet-4-5
+# model_family: anthropic-claude
+# cursor_mode: background-agent
+# branch: agent/feature-xyz-abc123
+# timestamp: 2026-04-07T14:32:00Z
+# sod_status: PENDING_INDEPENDENT_REVIEW
+# ---
+```
+
+## SELF-HOSTED CLOUD AGENTS
+
+For enterprise deployments using self-hosted cloud agents (code stays in
+your network), the same SoD rules apply:
+
+- The execution environment (cloud vs self-hosted vs local) does NOT affect SoD
+- Model family independence is what matters, not where the agent runs
+- Self-hosted agents using the same model family as the generator = **VIOLATION**
+
+## MULTI-AGENT PARALLEL WORKFLOWS
+
+Cursor 3 supports running many agents in parallel across repos and
+environments. When orchestrating multiple agents:
+
+1. **Assign generation and review to different model families**
+2. **Track which agent/model produced each change** via metadata tags
+3. **Do not let Agent A review Agent A's output** even across different repos
+4. **Use worktree isolation** to separate generation and review contexts
+
+### Recommended Multi-Agent SoD Architecture
+
+```
+┌─────────────────────────────────┐
+│ Agent 1 (Generation)            │
+│ Model: Claude Sonnet 4.5        │
+│ Context: Feature branch         │
+│ Output: Code + metadata tags    │
+└──────────────┬──────────────────┘
+               │
+               ▼
+┌─────────────────────────────────┐
+│ SAST Pipeline (Always OK)       │
+│ Tools: Semgrep, Snyk, CodeQL    │
+│ Output: Deterministic findings  │
+└──────────────┬──────────────────┘
+               │
+               ▼
+┌─────────────────────────────────┐
+│ Agent 2 (Independent Review)    │
+│ Model: Gemini 2.5 Pro           │
+│ Context: Sanitized (blind)      │
+│ Output: Security findings + SoD │
+└─────────────────────────────────┘
+```
+
+## BYO (BRING YOUR OWN) API KEYS
+
+When using BYO API keys in Cursor, SoD compliance depends on which model
+the key activates:
+
+- BYO OpenAI key → Model is in `openai-gpt` family
+- BYO Anthropic key → Model is in `anthropic-claude` family
+- BYO Google key → Model is in `google-gemini` family
+
+Verify the actual model being used via Cursor's model dropdown or settings.
+A BYO key does not change the model's family classification.

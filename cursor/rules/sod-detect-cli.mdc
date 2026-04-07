@@ -1,0 +1,108 @@
+---
+description: "Integration guide for sod_detect.py CLI tool within Cursor terminal. Activated when running SoD checks, scanning repos, or validating compliance from the terminal."
+alwaysApply: false
+---
+
+# Using sod_detect.py from Cursor Terminal
+
+## Setup
+
+Copy `sod_detect.py` to your project's `scripts/` directory.
+It is a single-file, zero-dependency Python script (Python 3.8+).
+
+```bash
+cp /path/to/sod-skills/scripts/sod_detect.py ./scripts/
+```
+
+## Commands
+
+### Check SoD Compliance
+```bash
+# Basic check — are generator and reviewer from different families?
+python scripts/sod_detect.py check \
+  --gen-model "claude-sonnet-4-5" \
+  --review-model "gemini-2.5-pro"
+
+# With JSON output for audit trail
+python scripts/sod_detect.py check \
+  --gen-model "cursor-gpt-4o" \
+  --review-model "cursor-claude-sonnet" \
+  --output sod-compliance.json
+
+# Strict mode — treat UNKNOWN as VIOLATED (for CI/CD gates)
+python scripts/sod_detect.py check \
+  --gen-model "cursor-gpt-4o" \
+  --review-model "cursor-claude-sonnet" \
+  --strict
+```
+
+### Scan Repository for AI Metadata
+```bash
+# Scan git log for AI generation markers
+python scripts/sod_detect.py scan --repo-path .
+
+# Scan specific files for generation metadata
+python scripts/sod_detect.py scan --repo-path ./src
+```
+
+### List Known Model Registry
+```bash
+python scripts/sod_detect.py registry
+```
+
+### Validate a Model Pair
+```bash
+python scripts/sod_detect.py validate \
+  --gen-model "gpt-4o" \
+  --review-model "claude-sonnet-4-5"
+```
+
+## Example Output
+```
+✅ PASS: SoD ENFORCED
+   Generation: gpt-4o (family: openai-gpt, provider: openai)
+   Review: claude-sonnet-4-5 (family: anthropic-claude, provider: anthropic)
+   Status: Different model families — SoD satisfied
+
+⚠️  WARN: SoD UNKNOWN
+   Generation: custom-model (family: unknown)
+   Review: gemini-2.5-pro (family: google-gemini, provider: google-deepmind)
+   Status: Generator family unknown — add @generatedBy tag
+
+❌ FAIL: SoD VIOLATED
+   Generation: gpt-4o (family: openai-gpt, provider: openai)
+   Review: gpt-4-turbo (family: openai-gpt, provider: openai)
+   Status: Same model family — SoD violated
+```
+
+## Pre-Commit Hook
+```bash
+#!/bin/bash
+# .git/hooks/pre-commit
+python scripts/sod_detect.py check \
+  --gen-model "$CURSOR_GENERATION_MODEL" \
+  --review-model "$CURSOR_REVIEW_MODEL" \
+  --strict \
+  || exit 1
+```
+
+## Cursor-Specific Tips
+
+### Determine Your Current Model
+The model Cursor is using appears in the model dropdown at the top of
+the agent/chat panel. Common mappings:
+
+| Cursor Shows | sod_detect.py --gen-model value |
+|---|---|
+| Claude Sonnet 4.5 | `claude-sonnet-4-5` |
+| Claude Opus 4 | `claude-opus-4-6` |
+| GPT-4o | `gpt-4o` |
+| Gemini 2.5 Pro | `gemini-2.5-pro` |
+| Gemini 3 Pro | `gemini-3-pro` |
+| Cursor (built-in) | Check underlying model via settings |
+
+### Background Agent Model Detection
+Background Agent output branches include commit metadata. Check:
+```bash
+git log --format="%B" -1 agent/feature-branch | grep -i "model\|generated"
+```

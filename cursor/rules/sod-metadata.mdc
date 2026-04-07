@@ -1,0 +1,71 @@
+---
+description: "Generation metadata tagging rules for AI-produced code. Activated when Cursor generates or modifies code files."
+globs: "**/*.{py,js,ts,tsx,jsx,go,rs,java,c,cpp,h,hpp,rb,sh,bash,yaml,yml,tf,sql}"
+alwaysApply: false
+---
+
+# Generation Metadata Tagging
+
+When generating or modifying code files, append a metadata block as a comment
+at the end of each file using the appropriate comment syntax.
+
+## Python / Ruby / Shell / YAML
+```
+# --- AI Generation Metadata ---
+# model_id: <your model identifier>
+# model_family: <your model family>
+# cursor_mode: <agent|composer|chat|background-agent>
+# timestamp: <ISO 8601 UTC>
+# sod_status: PENDING_INDEPENDENT_REVIEW
+# ---
+```
+
+## JavaScript / TypeScript / Java / C / C++ / Go / Rust
+```
+// --- AI Generation Metadata ---
+// model_id: <your model identifier>
+// model_family: <your model family>
+// cursor_mode: <agent|composer|chat|background-agent>
+// timestamp: <ISO 8601 UTC>
+// sod_status: PENDING_INDEPENDENT_REVIEW
+// ---
+```
+
+## SQL
+```
+-- --- AI Generation Metadata ---
+-- model_id: <your model identifier>
+-- model_family: <your model family>
+-- cursor_mode: <agent|composer|chat|background-agent>
+-- timestamp: <ISO 8601 UTC>
+-- sod_status: PENDING_INDEPENDENT_REVIEW
+-- ---
+```
+
+## Terraform / HCL
+```
+# --- AI Generation Metadata ---
+# model_id: <your model identifier>
+# model_family: <your model family>
+# cursor_mode: <agent|composer|chat|background-agent>
+# timestamp: <ISO 8601 UTC>
+# sod_status: PENDING_INDEPENDENT_REVIEW
+# ---
+```
+
+## Field Descriptions
+
+| Field | Description |
+|---|---|
+| `model_id` | Exact model name (e.g., `claude-sonnet-4-5`, `gpt-4o`, `gemini-2.5-pro`) |
+| `model_family` | Family grouping for SoD (e.g., `anthropic-claude`, `openai-gpt`) |
+| `cursor_mode` | Which Cursor interaction mode produced the code |
+| `timestamp` | ISO 8601 UTC generation timestamp |
+| `sod_status` | Always `PENDING_INDEPENDENT_REVIEW` at generation time |
+
+## Cursor Mode Values
+
+- `agent` — Cursor Agent mode (interactive, auto-executes tool calls)
+- `chat` — Cursor Chat mode (conversational, no auto-execution)
+- `background-agent` — Cursor Background Agent (async cloud VM execution)
+- `composer` — Legacy Composer mode (pre-Cursor 2.0)
