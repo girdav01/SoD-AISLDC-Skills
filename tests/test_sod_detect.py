@@ -440,7 +440,7 @@ class TestAuditRecord:
         # Verify expected compliance frameworks
         expected_frameworks = [
             "NIST SP 800-53 AC-5",
-            "ISO 27001 A.6.1.2",
+            "ISO 27001 A.5.3",
             "SOX Section 404",
             "PCI-DSS 6.3",
             "NIST SSDF PW.7",

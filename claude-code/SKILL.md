@@ -1,6 +1,6 @@
 ---
 name: sod-code-security
-description: "Enforce Separation of Duties (SoD) in AI-generated code security reviews. Triggers on: code review requests, security scans, vulnerability checks, SoD queries, provenance audits, CI/CD security integration, or when comparing generator/reviewer models. Also triggers on keywords: 'review code', 'security scan', 'vulnerability', 'SoD', 'separation of duties', 'who reviewed', 'audit trail', 'independent review', 'code provenance', 'model family', 'cross-model review', 'compliance audit'. Prevents the same model from being both generator and reviewer — enforcing NIST AC-5, ISO 27001 A.6.1.2, and SOC 2 CC6.1 logical segregation controls."
+description: "Enforce Separation of Duties (SoD) in AI-generated code security reviews. Triggers on: code review requests, security scans, vulnerability checks, SoD queries, provenance audits, CI/CD security integration, or when comparing generator/reviewer models. Also triggers on keywords: 'review code', 'security scan', 'vulnerability', 'SoD', 'separation of duties', 'who reviewed', 'audit trail', 'independent review', 'code provenance', 'model family', 'cross-model review', 'compliance audit'. Prevents the same model from being both generator and reviewer — enforcing NIST AC-5, ISO 27001 A.5.3, and SOC 2 CC6.1 logical segregation controls."
 ---
 
 # SoD Code Security — Separation of Duties for AI-Generated Code
@@ -224,7 +224,7 @@ When a valid SoD review is completed, generate an audit record with cryptographi
   "deterministic_validation": ["semgrep", "trivy"],
   "compliance_framework_coverage": {
     "NIST AC-5": "Separation of Duties",
-    "ISO 27001 A.6.1.2": "Segregation of Duties",
+    "ISO 27001 A.5.3": "Segregation of Duties",
     "NIST SSDF PW.7": "Code Review",
     "SOC 2 CC6.1": "Logical Access Segregation"
   },

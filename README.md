@@ -2,7 +2,7 @@
 ## Separation of Duties Enforcement for AI-Generated Code
 
 > **The entity that generates code must not be the entity that certifies its security.**
-> — NIST SP 800-53 AC-5 / ISO 27001 A.6.1.2
+> — NIST SP 800-53 AC-5 / ISO 27001 A.5.3
 
 © 2026 David Girard. Released under MIT License.
 
@@ -54,7 +54,14 @@ sod-skills/
 ├── claude-code/
 │   └── SKILL.md                       # Claude Code skill (auto-triggers)
 ├── cursor/
-│   └── rules                   # Cursor IDE project rules
+│   ├── .cursorrules                   # Legacy format (Cursor < 0.45 compat)
+│   └── .cursor/
+│       └── rules/                     # Modern Cursor 3 .mdc rules
+│           ├── sod-core.mdc           # Core SoD principles (always active)
+│           ├── sod-metadata.mdc       # Generation metadata tagging (file-glob)
+│           ├── sod-cursor3-agents.mdc # Agent & Background Agent SoD rules
+│           ├── sod-detection.mdc      # Detection logic & response procedures
+│           └── sod-detect-cli.mdc     # sod_detect.py CLI integration guide
 ├── codex/
 │   └── CODEX.md                       # OpenAI Codex/ChatGPT system instructions
 ├── ci-cd/
@@ -88,13 +95,32 @@ ln -s /path/to/sod-skills/claude-code/SKILL.md .claude/skills/sod-code-security/
 # The skill auto-triggers when Claude detects security review requests
 ```
 
-### Cursor IDE (April 2026 version, not for legacy rules)
+### Cursor IDE
+
+**Cursor 3 / 0.45+ (Recommended — Modern .mdc Rules):**
+
+```bash
+# Copy the .cursor/rules/ directory to your project root
+mkdir -p /path/to/your-project/.cursor/rules
+cp cursor/.cursor/rules/*.mdc /path/to/your-project/.cursor/rules/
+
+# Rules auto-load based on their frontmatter:
+#   sod-core.mdc        → alwaysApply: true (always in context)
+#   sod-metadata.mdc     → globs: **/*.{py,js,ts,...} (auto-attach on code files)
+#   sod-cursor3-agents.mdc → agent-triggered (when using Agent/Background Agents)
+#   sod-detection.mdc    → agent-triggered (when doing security reviews)
+#   sod-detect-cli.mdc   → agent-triggered (when running CLI commands)
+
+# Commit to git so your team inherits the rules
+git add .cursor/rules/
+git commit -m "Add SoD enforcement rules for Cursor"
+```
+
+**Cursor < 0.45 (Legacy .cursorrules):**
 
 ```bash
 # Copy to your project root (Cursor reads .cursorrules automatically)
-cp cursor/rules /path/to/your-project/.cursorrules
-
-# Verify Cursor picks it up — open Cursor and check the rules indicator
+cp cursor/.cursorrules /path/to/your-project/.cursorrules
 ```
 
 ### OpenAI Codex CLI / ChatGPT Custom GPT
@@ -263,7 +289,7 @@ python scripts/sod_detect.py check \
 | Framework | Control | SoD Relevance | Status |
 |-----------|---------|--------------|--------|
 | NIST SP 800-53 | AC-5 | Separation of Duties | Primary control |
-| ISO 27001:2022 | A.6.1.2 | Segregation of Duties | Aligned with A.6.1 access control |
+| ISO 27001:2022 | A.5.3 | Segregation of Duties | Annex A organizational control |
 | SOX (Sarbanes-Oxley) | Section 404 | Internal Controls | Code review segregation evidence |
 | PCI-DSS 4.0 | 6.3.2 | Secure Development | Code review before production |
 | NIST SSDF | PW.7.2 | Code Review Process | Reviewer independence requirement |

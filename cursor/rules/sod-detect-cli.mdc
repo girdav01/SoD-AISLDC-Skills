@@ -8,7 +8,7 @@ alwaysApply: false
 ## Setup
 
 Copy `sod_detect.py` to your project's `scripts/` directory.
-It is a single-file, zero-dependency Python script (Python 3.8+).
+It is a single-file, zero-dependency Python script (Python 3.10+).
 
 ```bash
 cp /path/to/sod-skills/scripts/sod_detect.py ./scripts/

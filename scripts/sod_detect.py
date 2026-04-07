@@ -363,7 +363,7 @@ def scan_git_log(repo_path: str = ".", max_commits: int = 50) -> list[dict]:
 
 COMPLIANCE_MAPPINGS = {
     "NIST SP 800-53 AC-5": "Separation of Duties",
-    "ISO 27001 A.6.1.2": "Segregation of Duties",
+    "ISO 27001 A.5.3": "Segregation of Duties",
     "SOX Section 404": "Internal Controls — Segregation",
     "PCI-DSS 6.3": "Secure Development — Code Review",
     "NIST SSDF PW.7": "Review and/or Analyze Code for Vulnerabilities",

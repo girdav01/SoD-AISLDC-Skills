@@ -999,7 +999,7 @@ app.post('/auth/login', (req, res) => {
 #### Setup
 - Navigate to script directory: `cd /path/to/sod-skills/`
 - Ensure `sod_detect.py` is executable: `chmod +x sod_detect.py`
-- Have Python 3.8+ available
+- Have Python 3.10+ available
 
 #### Command
 ```bash
@@ -1587,14 +1587,14 @@ Use the table below to document test execution results:
 - [ ] `GOOGLE_API_KEY` set for Gemini tests
 - [ ] `OPENAI_API_KEY` set for GPT tests (if applicable)
 - [ ] `GITHUB_TOKEN` set for GitHub Actions tests
-- [ ] Python 3.8+ available for sod_detect.py tests
+- [ ] Python 3.10+ available for sod_detect.py tests
 
 ### Tools & Dependencies
 - Claude Code (IDE plugin installed)
 - Cursor IDE (optional, for Cursor tests)
 - ChatGPT (web browser)
 - Git (for repo tests)
-- Python 3.8+ with jq for JSON validation
+- Python 3.10+ with jq for JSON validation
 - GitHub repository with Actions enabled
 
 ### Model IDs for Copy-Paste

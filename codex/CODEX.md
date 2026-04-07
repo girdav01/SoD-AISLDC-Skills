@@ -3,7 +3,7 @@
 # =============================================================
 # For OpenAI Codex CLI, ChatGPT Custom GPTs, or any OpenAI-based
 # coding assistant. Add as system instructions or project docs.
-# Enforces NIST AC-5 / ISO 27001 Separation of Duties.
+# Enforces NIST AC-5 / ISO 27001 A.5.3 Separation of Duties.
 # © 2026 David Girard
 # =============================================================
 
@@ -161,7 +161,7 @@ Output a structured audit record:
     "code_hash": "<SHA-256 of reviewed code>",
     "sanitization_proof": "<Hash of blind-review sanitized input>"
   },
-  "compliance": ["NIST AC-5", "ISO 27001 A.6.1.2", "NIST SSDF PW.7", "SOC 2 CC6.1"],
+  "compliance": ["NIST AC-5", "ISO 27001 A.5.3", "NIST SSDF PW.7", "SOC 2 CC6.1"],
   "findings_count": {
     "critical": 0,
     "high": 0,
